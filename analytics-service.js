@@ -78,7 +78,26 @@ app.get('/api/analytics/dashboard-stats', async (req, res) => {
 app.get('/api/analytics/fast-manual-bids', async (req, res) => {
     try {
         const query = `
-            WITH bid_intervals AS (
+            WITH manual_bids_only AS (
+                SELECT 
+                    lot_id,
+                    auction_number,
+                    lot_number,
+                    bidder_login,
+                    bid_amount,
+                    bid_timestamp,
+                    is_auto_bid
+                FROM lot_bids 
+                WHERE is_auto_bid = false
+                  AND lot_id IN (
+                    SELECT lot_id 
+                    FROM lot_bids 
+                    WHERE is_auto_bid = false
+                    GROUP BY lot_id 
+                    HAVING COUNT(*) > 3
+                  )
+            ),
+            bid_intervals AS (
                 SELECT 
                     lot_id,
                     auction_number,
@@ -88,14 +107,9 @@ app.get('/api/analytics/fast-manual-bids', async (req, res) => {
                     bid_timestamp,
                     is_auto_bid,
                     LAG(bid_timestamp) OVER (PARTITION BY lot_id ORDER BY bid_timestamp) as prev_bid_timestamp,
+                    LAG(bidder_login) OVER (PARTITION BY lot_id ORDER BY bid_timestamp) as prev_bidder_login,
                     EXTRACT(EPOCH FROM (bid_timestamp - LAG(bid_timestamp) OVER (PARTITION BY lot_id ORDER BY bid_timestamp))) as seconds_between_bids
-                FROM lot_bids 
-                WHERE lot_id IN (
-                    SELECT lot_id 
-                    FROM lot_bids 
-                    GROUP BY lot_id 
-                    HAVING COUNT(*) > 5
-                )
+                FROM manual_bids_only
             )
             SELECT 
                 lot_id,
@@ -105,15 +119,16 @@ app.get('/api/analytics/fast-manual-bids', async (req, res) => {
                 bid_amount,
                 bid_timestamp,
                 is_auto_bid,
+                prev_bidder_login,
                 seconds_between_bids,
                 CASE 
-                    WHEN is_auto_bid = false AND seconds_between_bids < 1 THEN 'КРИТИЧЕСКИ ПОДОЗРИТЕЛЬНО: ручная ставка < 1 сек'
-                    WHEN is_auto_bid = false AND seconds_between_bids < 5 THEN 'ПОДОЗРИТЕЛЬНО: ручная ставка < 5 сек'
-                    WHEN is_auto_bid = false AND seconds_between_bids < 30 THEN 'ВНИМАНИЕ: быстрая ручная ставка'
+                    WHEN seconds_between_bids < 1 THEN 'КРИТИЧЕСКИ ПОДОЗРИТЕЛЬНО: ручная ставка < 1 сек'
+                    WHEN seconds_between_bids < 5 THEN 'ПОДОЗРИТЕЛЬНО: ручная ставка < 5 сек'
+                    WHEN seconds_between_bids < 30 THEN 'ВНИМАНИЕ: быстрая ручная ставка'
                 END as suspicious_level
             FROM bid_intervals
-            WHERE is_auto_bid = false 
-              AND seconds_between_bids < 30
+            WHERE seconds_between_bids < 30
+              AND seconds_between_bids IS NOT NULL
             ORDER BY seconds_between_bids ASC, lot_id, bid_timestamp
             LIMIT 100;
         `;
