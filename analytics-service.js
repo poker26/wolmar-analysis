@@ -13,10 +13,20 @@ app.use(express.json());
 // Статические файлы
 app.use(express.static('public'));
 
-// Подключение к базе данных
+// Подключение к базе данных (Supabase)
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/wolmar_parser',
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    user: 'postgres.xkwgspqwebfeteoblayu',
+    host: 'aws-0-eu-north-1.pooler.supabase.com',
+    database: 'postgres',
+    password: 'Gopapopa326+',
+    port: 6543,
+    ssl: {
+        rejectUnauthorized: false
+    },
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 30000,
+    max: 10,
+    allowExitOnIdle: true
 });
 
 // Проверка подключения к БД
