@@ -130,9 +130,15 @@ app.get('/api/analytics/fast-manual-bids', async (req, res) => {
               AND seconds_between_bids IS NOT NULL
             GROUP BY bidder_login
             ORDER BY 
+                CASE 
+                    WHEN COUNT(CASE WHEN seconds_between_bids < 1 THEN 1 END) > 0 THEN 1
+                    WHEN COUNT(CASE WHEN seconds_between_bids < 5 THEN 1 END) > 5 THEN 2
+                    WHEN COUNT(*) > 10 THEN 3
+                    ELSE 4
+                END ASC,
+                suspicious_bids_count DESC,
                 critical_count DESC,
-                suspicious_count DESC,
-                suspicious_bids_count DESC;
+                suspicious_count DESC;
         `;
         
         const { rows } = await pool.query(query);
