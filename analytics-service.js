@@ -112,25 +112,27 @@ app.get('/api/analytics/fast-manual-bids', async (req, res) => {
                 FROM manual_bids_only
             )
             SELECT 
-                lot_id,
-                auction_number,
-                lot_number,
                 bidder_login,
-                bid_amount,
-                bid_timestamp,
-                is_auto_bid,
-                prev_bidder_login,
-                seconds_between_bids,
+                COUNT(*) as suspicious_bids_count,
+                MIN(seconds_between_bids) as fastest_interval,
+                ROUND(AVG(seconds_between_bids), 2) as avg_interval,
+                COUNT(CASE WHEN seconds_between_bids < 1 THEN 1 END) as critical_count,
+                COUNT(CASE WHEN seconds_between_bids < 5 THEN 1 END) as suspicious_count,
+                COUNT(CASE WHEN seconds_between_bids < 30 THEN 1 END) as warning_count,
                 CASE 
-                    WHEN seconds_between_bids < 1 THEN 'КРИТИЧЕСКИ ПОДОЗРИТЕЛЬНО: ручная ставка < 1 сек'
-                    WHEN seconds_between_bids < 5 THEN 'ПОДОЗРИТЕЛЬНО: ручная ставка < 5 сек'
-                    WHEN seconds_between_bids < 30 THEN 'ВНИМАНИЕ: быстрая ручная ставка'
-                END as suspicious_level
+                    WHEN COUNT(CASE WHEN seconds_between_bids < 1 THEN 1 END) > 0 THEN 'КРИТИЧЕСКИ ПОДОЗРИТЕЛЬНО'
+                    WHEN COUNT(CASE WHEN seconds_between_bids < 5 THEN 1 END) > 5 THEN 'ПОДОЗРИТЕЛЬНО'
+                    WHEN COUNT(*) > 10 THEN 'ВНИМАНИЕ'
+                    ELSE 'НОРМА'
+                END as risk_level
             FROM bid_intervals
             WHERE seconds_between_bids < 30
               AND seconds_between_bids IS NOT NULL
-            ORDER BY seconds_between_bids ASC, lot_id, bid_timestamp
-            LIMIT 100;
+            GROUP BY bidder_login
+            ORDER BY 
+                critical_count DESC,
+                suspicious_count DESC,
+                suspicious_bids_count DESC;
         `;
         
         const { rows } = await pool.query(query);
