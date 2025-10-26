@@ -195,10 +195,11 @@
         }
 
         // Load fast manual bids analysis
-        async function loadFastBids() {
+        async function loadFastBids(event) {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            
             try {
-                const button = event.target;
-                const originalText = button.innerHTML;
                 button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Загрузка...';
                 button.disabled = true;
 
@@ -207,7 +208,7 @@
                 
                 if (result.success) {
                     displayFastBids(result.data);
-                    document.getElementById('fast-bids-count').textContent = `Найдено ${result.count} подозрительных ставок`;
+                    document.getElementById('fast-bids-count').textContent = `Найдено ${result.data.length} подозрительных пользователей`;
                     document.getElementById('fast-bids-results').classList.remove('hidden');
                 } else {
                     alert('Ошибка загрузки данных: ' + result.error);
@@ -216,7 +217,6 @@
                 console.error('Ошибка загрузки быстрых ставок:', error);
                 alert('Ошибка загрузки данных');
             } finally {
-                const button = event.target;
                 button.innerHTML = '<i class="fas fa-search mr-2"></i>Загрузить анализ';
                 button.disabled = false;
             }
@@ -261,7 +261,7 @@
                         <span class="font-semibold text-orange-600">${user.suspicious_count}</span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <span class="font-mono">${user.fastest_interval.toFixed(2)} сек</span>
+                        <span class="font-mono">${parseFloat(user.fastest_interval).toFixed(2)} сек</span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <span class="font-mono">${user.avg_interval} сек</span>
