@@ -83,36 +83,100 @@
             </div>
         </div>
 
-        <!-- Analysis Content -->
-        <div class="bg-white rounded-lg shadow-sm p-6">
-            <h2 class="text-xl font-semibold text-gray-900 mb-4">Анализ подозрительных ставок</h2>
-            <p class="text-gray-600 mb-4">Система анализа подозрительной активности на аукционах Wolmar</p>
+        <!-- Analysis Tabs -->
+        <div class="bg-white rounded-lg shadow-sm">
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+                    <button onclick="showTab('fast-bids')" id="tab-fast-bids" class="tab-button active border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        <i class="fas fa-bolt mr-2"></i>Быстрые ставки
+                    </button>
+                    <button onclick="showTab('autobid-traps')" id="tab-autobid-traps" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        <i class="fas fa-mouse-pointer mr-2"></i>Ловушки автобида
+                    </button>
+                    <button onclick="showTab('time-patterns')" id="tab-time-patterns" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        <i class="fas fa-clock mr-2"></i>Временные паттерны
+                    </button>
+                    <button onclick="showTab('risk-scoring')" id="tab-risk-scoring" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>Скоринг рисков
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Fast Bids Tab Content -->
+            <div id="content-fast-bids" class="tab-content p-6">
+                <div class="mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Анализ быстрых ручных ставок</h3>
+                    <p class="text-gray-600 mb-4">Поиск ручных ставок с подозрительно малыми интервалами времени</p>
+                    <button onclick="loadFastBids()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                        <i class="fas fa-search mr-2"></i>Загрузить анализ
+                    </button>
+                </div>
+                
+                <div id="fast-bids-results" class="hidden">
+                    <div class="mb-4">
+                        <span id="fast-bids-count" class="text-sm text-gray-600"></span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Аукцион/Лот</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Участник</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Сумма</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Время</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Интервал</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Уровень риска</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fast-bids-table-body" class="bg-white divide-y divide-gray-200">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other Tab Contents (Placeholder) -->
+            <div id="content-autobid-traps" class="tab-content p-6 hidden">
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Ловушки автобида</h3>
+                <p class="text-gray-600">Функция в разработке...</p>
+            </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-blue-50 p-4 rounded-lg">
-                    <h3 class="font-semibold text-blue-900 mb-2">Быстрые ставки</h3>
-                    <p class="text-sm text-blue-700">Анализ ставок с подозрительно малыми интервалами времени</p>
-                </div>
-                
-                <div class="bg-yellow-50 p-4 rounded-lg">
-                    <h3 class="font-semibold text-yellow-900 mb-2">Ловушки автобида</h3>
-                    <p class="text-sm text-yellow-700">Поиск ручных ставок, точно равных финальной цене</p>
-                </div>
-                
-                <div class="bg-green-50 p-4 rounded-lg">
-                    <h3 class="font-semibold text-green-900 mb-2">Временные паттерны</h3>
-                    <p class="text-sm text-green-700">Анализ времени ставок для выявления ботов</p>
-                </div>
-                
-                <div class="bg-red-50 p-4 rounded-lg">
-                    <h3 class="font-semibold text-red-900 mb-2">Скоринг рисков</h3>
-                    <p class="text-sm text-red-700">Комплексная оценка подозрительности пользователей</p>
-                </div>
+            <div id="content-time-patterns" class="tab-content p-6 hidden">
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Временные паттерны</h3>
+                <p class="text-gray-600">Функция в разработке...</p>
+            </div>
+            
+            <div id="content-risk-scoring" class="tab-content p-6 hidden">
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Скоринг рисков</h3>
+                <p class="text-gray-600">Функция в разработке...</p>
             </div>
         </div>
     </main>
 
     <script>
+        // Tab switching functionality
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active', 'border-blue-500', 'text-blue-600');
+                button.classList.add('border-transparent', 'text-gray-500');
+            });
+            
+            // Show selected tab content
+            document.getElementById(`content-${tabName}`).classList.remove('hidden');
+            
+            // Add active class to selected tab button
+            const activeButton = document.getElementById(`tab-${tabName}`);
+            activeButton.classList.add('active', 'border-blue-500', 'text-blue-600');
+            activeButton.classList.remove('border-transparent', 'text-gray-500');
+        }
+
+        // Load dashboard stats
         async function loadStats() {
             try {
                 const response = await fetch('/api/analytics/dashboard-stats');
@@ -128,7 +192,82 @@
                 console.error('Ошибка загрузки статистики:', error);
             }
         }
+
+        // Load fast manual bids analysis
+        async function loadFastBids() {
+            try {
+                const button = event.target;
+                const originalText = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Загрузка...';
+                button.disabled = true;
+
+                const response = await fetch('/api/analytics/fast-manual-bids');
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayFastBids(result.data);
+                    document.getElementById('fast-bids-count').textContent = `Найдено ${result.count} подозрительных ставок`;
+                    document.getElementById('fast-bids-results').classList.remove('hidden');
+                } else {
+                    alert('Ошибка загрузки данных: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки быстрых ставок:', error);
+                alert('Ошибка загрузки данных');
+            } finally {
+                const button = event.target;
+                button.innerHTML = '<i class="fas fa-search mr-2"></i>Загрузить анализ';
+                button.disabled = false;
+            }
+        }
+
+        // Display fast bids results
+        function displayFastBids(data) {
+            const tbody = document.getElementById('fast-bids-table-body');
+            tbody.innerHTML = '';
+
+            data.forEach(bid => {
+                const row = document.createElement('tr');
+                
+                // Risk level styling
+                let riskClass = 'text-gray-600';
+                let riskIcon = '';
+                if (bid.suspicious_level.includes('КРИТИЧЕСКИ')) {
+                    riskClass = 'text-red-600 font-semibold';
+                    riskIcon = '<i class="fas fa-exclamation-triangle text-red-500 mr-1"></i>';
+                } else if (bid.suspicious_level.includes('ПОДОЗРИТЕЛЬНО')) {
+                    riskClass = 'text-orange-600 font-medium';
+                    riskIcon = '<i class="fas fa-exclamation-circle text-orange-500 mr-1"></i>';
+                } else if (bid.suspicious_level.includes('ВНИМАНИЕ')) {
+                    riskClass = 'text-yellow-600';
+                    riskIcon = '<i class="fas fa-info-circle text-yellow-500 mr-1"></i>';
+                }
+
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${bid.auction_number}/${bid.lot_number}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${bid.bidder_login}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${parseFloat(bid.bid_amount).toLocaleString()} ₽
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${new Date(bid.bid_timestamp).toLocaleString('ru-RU')}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${parseFloat(bid.seconds_between_bids).toFixed(2)} сек
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm ${riskClass}">
+                        ${riskIcon}${bid.suspicious_level}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
         
+        // Initialize page
         loadStats();
     </script>
 </body>
