@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Аналитика подозрительных ставок - Wolmar Parser</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center">
+                    <i class="fas fa-chart-line text-blue-600 text-2xl mr-3"></i>
+                    <h1 class="text-2xl font-bold text-gray-900">Аналитика подозрительных ставок</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-home mr-2"></i>Главная
+                    </a>
+                    <a href="/admin" class="text-gray-600 hover:text-gray-900">
+                        <i class="fas fa-cog mr-2"></i>Админка
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Dashboard Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                        <i class="fas fa-gavel text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Всего ставок</p>
+                        <p class="text-2xl font-bold text-gray-900" id="total-bids">-</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-green-100 text-green-600">
+                        <i class="fas fa-users text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Участников</p>
+                        <p class="text-2xl font-bold text-gray-900" id="total-bidders">-</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                        <i class="fas fa-hand-paper text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Ручных ставок</p>
+                        <p class="text-2xl font-bold text-gray-900" id="manual-bids">-</p>
+                        <p class="text-xs text-gray-500" id="manual-percentage">-</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-red-100 text-red-600">
+                        <i class="fas fa-exclamation-triangle text-xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Подозрительных</p>
+                        <p class="text-2xl font-bold text-gray-900" id="suspicious-users">-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Content -->
+        <div class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">Анализ подозрительных ставок</h2>
+            <p class="text-gray-600 mb-4">Система анализа подозрительной активности на аукционах Wolmar</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <h3 class="font-semibold text-blue-900 mb-2">Быстрые ставки</h3>
+                    <p class="text-sm text-blue-700">Анализ ставок с подозрительно малыми интервалами времени</p>
+                </div>
+                
+                <div class="bg-yellow-50 p-4 rounded-lg">
+                    <h3 class="font-semibold text-yellow-900 mb-2">Ловушки автобида</h3>
+                    <p class="text-sm text-yellow-700">Поиск ручных ставок, точно равных финальной цене</p>
+                </div>
+                
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <h3 class="font-semibold text-green-900 mb-2">Временные паттерны</h3>
+                    <p class="text-sm text-green-700">Анализ времени ставок для выявления ботов</p>
+                </div>
+                
+                <div class="bg-red-50 p-4 rounded-lg">
+                    <h3 class="font-semibold text-red-900 mb-2">Скоринг рисков</h3>
+                    <p class="text-sm text-red-700">Комплексная оценка подозрительности пользователей</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/analytics/dashboard-stats');
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('total-bids').textContent = result.data.totalBids.toLocaleString();
+                    document.getElementById('total-bidders').textContent = result.data.totalBidders.toLocaleString();
+                    document.getElementById('manual-bids').textContent = result.data.manualBids.toLocaleString();
+                    document.getElementById('manual-percentage').textContent = `${result.data.manualBidPercentage}% от всех ставок`;
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки статистики:', error);
+            }
+        }
+        
+        loadStats();
+    </script>
+</body>
+</html>
