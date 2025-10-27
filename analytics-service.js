@@ -159,6 +159,105 @@ app.get('/api/analytics/fast-manual-bids', async (req, res) => {
     }
 });
 
+// API для анализа ловушек автобида
+app.get('/api/analytics/autobid-traps', async (req, res) => {
+    try {
+        const query = `
+            WITH lot_stats AS (
+                SELECT 
+                    al.id as lot_id,
+                    al.auction_number,
+                    al.lot_number,
+                    al.winner_login,
+                    al.winning_bid,
+                    al.starting_bid,
+                    al.category,
+                    COUNT(lb.id) as total_bids,
+                    COUNT(DISTINCT lb.bidder_login) as unique_bidders,
+                    COUNT(CASE WHEN lb.is_auto_bid = true THEN 1 END) as autobid_count,
+                    COUNT(CASE WHEN lb.is_auto_bid = false THEN 1 END) as manual_bid_count,
+                    ROUND(al.winning_bid / NULLIF(al.starting_bid, 0), 2) as price_multiplier
+                FROM auction_lots al
+                LEFT JOIN lot_bids lb ON al.id = lb.lot_id
+                WHERE al.winning_bid IS NOT NULL
+                  AND al.starting_bid IS NOT NULL
+                  AND al.winning_bid > 0
+                  AND al.starting_bid > 0
+                GROUP BY al.id, al.auction_number, al.lot_number, al.winner_login, 
+                         al.winning_bid, al.starting_bid, al.category
+            ),
+            winner_autobid_check AS (
+                SELECT 
+                    ls.*,
+                    CASE 
+                        WHEN EXISTS (
+                            SELECT 1 FROM lot_bids lb 
+                            WHERE lb.lot_id = ls.lot_id 
+                              AND lb.bidder_login = ls.winner_login 
+                              AND lb.is_auto_bid = true
+                        ) THEN true 
+                        ELSE false 
+                    END as winner_used_autobid
+                FROM lot_stats ls
+            ),
+            suspicious_lots AS (
+                SELECT 
+                    wac.*,
+                    CASE 
+                        WHEN wac.total_bids >= 15 AND wac.unique_bidders >= 4 AND 
+                             wac.winner_used_autobid = true AND wac.price_multiplier >= 2.0 THEN 'КРИТИЧЕСКИ ПОДОЗРИТЕЛЬНО'
+                        WHEN wac.total_bids >= 10 AND wac.unique_bidders >= 3 AND 
+                             wac.winner_used_autobid = true AND wac.price_multiplier >= 1.5 THEN 'ПОДОЗРИТЕЛЬНО'
+                        WHEN wac.total_bids >= 8 AND wac.unique_bidders >= 3 AND 
+                             wac.winner_used_autobid = true AND wac.price_multiplier >= 1.2 THEN 'ВНИМАНИЕ'
+                        ELSE 'НОРМА'
+                    END as risk_level
+                FROM winner_autobid_check wac
+            )
+            SELECT 
+                lot_id,
+                auction_number,
+                lot_number,
+                winner_login,
+                winning_bid,
+                starting_bid,
+                price_multiplier,
+                total_bids,
+                unique_bidders,
+                autobid_count,
+                manual_bid_count,
+                winner_used_autobid,
+                risk_level
+            FROM suspicious_lots
+            WHERE risk_level != 'НОРМА'
+            ORDER BY 
+                CASE risk_level
+                    WHEN 'КРИТИЧЕСКИ ПОДОЗРИТЕЛЬНО' THEN 1
+                    WHEN 'ПОДОЗРИТЕЛЬНО' THEN 2
+                    WHEN 'ВНИМАНИЕ' THEN 3
+                END,
+                price_multiplier DESC,
+                total_bids DESC;
+        `;
+        
+        const { rows } = await pool.query(query);
+        
+        res.json({
+            success: true,
+            data: rows,
+            count: rows.length
+        });
+        
+    } catch (error) {
+        console.error('❌ Ошибка анализа ловушек автобида:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Ошибка анализа ловушек автобида',
+            details: error.message 
+        });
+    }
+});
+
 // Страница аналитики
 app.get('/analytics', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'analytics.html'));

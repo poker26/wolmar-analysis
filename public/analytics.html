@@ -136,10 +136,39 @@
                 </div>
             </div>
 
-            <!-- Other Tab Contents (Placeholder) -->
+            <!-- Autobid Traps Tab Content -->
             <div id="content-autobid-traps" class="tab-content p-6 hidden">
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">Ловушки автобида</h3>
-                <p class="text-gray-600">Функция в разработке...</p>
+                <div class="mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Анализ ловушек автобида</h3>
+                    <p class="text-gray-600 mb-4">Поиск лотов с подозрительной активностью, где победитель использовал автобид</p>
+                    <button onclick="loadAutobidTraps(event)" class="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700">
+                        <i class="fas fa-search mr-2"></i>Загрузить анализ
+                    </button>
+                </div>
+                
+                <div id="autobid-traps-results" class="hidden">
+                    <div class="mb-4">
+                        <span id="autobid-traps-count" class="text-sm text-gray-600"></span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Аукцион/Лот</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Победитель</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Финальная цена</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Начальная цена</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Рост цены</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ставок</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Участников</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Уровень риска</th>
+                                </tr>
+                            </thead>
+                            <tbody id="autobid-traps-table-body" class="bg-white divide-y divide-gray-200">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
             
             <div id="content-time-patterns" class="tab-content p-6 hidden">
@@ -268,6 +297,89 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm ${riskClass}">
                         ${riskIcon}${user.risk_level}
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Load autobid traps analysis
+        async function loadAutobidTraps(event) {
+            const button = event.target;
+            const originalText = button.innerHTML;
+            
+            try {
+                button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Загрузка...';
+                button.disabled = true;
+
+                const response = await fetch('/api/analytics/autobid-traps');
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayAutobidTraps(result.data);
+                    document.getElementById('autobid-traps-count').textContent = `Найдено ${result.data.length} подозрительных лотов`;
+                    document.getElementById('autobid-traps-results').classList.remove('hidden');
+                } else {
+                    alert('Ошибка загрузки данных: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки ловушек автобида:', error);
+                alert('Ошибка загрузки данных');
+            } finally {
+                button.innerHTML = '<i class="fas fa-search mr-2"></i>Загрузить анализ';
+                button.disabled = false;
+            }
+        }
+
+        // Display autobid traps results
+        function displayAutobidTraps(data) {
+            const tbody = document.getElementById('autobid-traps-table-body');
+            tbody.innerHTML = '';
+
+            data.forEach(lot => {
+                const row = document.createElement('tr');
+                
+                // Risk level styling
+                let riskClass = 'text-gray-600';
+                let riskIcon = '';
+                if (lot.risk_level === 'КРИТИЧЕСКИ ПОДОЗРИТЕЛЬНО') {
+                    riskClass = 'text-red-600 font-semibold';
+                    riskIcon = '<i class="fas fa-exclamation-triangle text-red-500 mr-1"></i>';
+                } else if (lot.risk_level === 'ПОДОЗРИТЕЛЬНО') {
+                    riskClass = 'text-orange-600 font-medium';
+                    riskIcon = '<i class="fas fa-exclamation-circle text-orange-500 mr-1"></i>';
+                } else if (lot.risk_level === 'ВНИМАНИЕ') {
+                    riskClass = 'text-yellow-600';
+                    riskIcon = '<i class="fas fa-info-circle text-yellow-500 mr-1"></i>';
+                }
+
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        ${lot.auction_number}/${lot.lot_number}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${lot.winner_login}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${parseFloat(lot.winning_bid).toLocaleString()} ₽
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${parseFloat(lot.starting_bid).toLocaleString()} ₽
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <span class="font-mono font-semibold">${lot.price_multiplier}x</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <span class="font-semibold">${lot.total_bids}</span>
+                        <div class="text-xs text-gray-500">
+                            ${lot.manual_bid_count} ручных, ${lot.autobid_count} автобидов
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <span class="font-semibold">${lot.unique_bidders}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm ${riskClass}">
+                        ${riskIcon}${lot.risk_level}
                     </td>
                 `;
                 tbody.appendChild(row);
