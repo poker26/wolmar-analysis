@@ -258,6 +258,73 @@ app.get('/api/analytics/autobid-traps', async (req, res) => {
     }
 });
 
+// Диагностический API для проверки ловушек автобида
+app.get('/api/analytics/autobid-traps-debug', async (req, res) => {
+    try {
+        // Проверяем базовую статистику
+        const basicStats = await pool.query(`
+            SELECT 
+                COUNT(*) as total_lots,
+                COUNT(CASE WHEN winning_bid IS NOT NULL THEN 1 END) as lots_with_winner,
+                COUNT(CASE WHEN starting_bid IS NOT NULL AND starting_bid > 0 THEN 1 END) as lots_with_starting_bid,
+                AVG(winning_bid) as avg_winning_bid,
+                AVG(starting_bid) as avg_starting_bid
+            FROM auction_lots
+        `);
+
+        // Проверяем лоты с автобидами
+        const autobidStats = await pool.query(`
+            SELECT 
+                COUNT(DISTINCT lb.lot_id) as lots_with_autobids,
+                COUNT(CASE WHEN lb.is_auto_bid = true THEN 1 END) as total_autobids
+            FROM lot_bids lb
+            WHERE lb.is_auto_bid = true
+        `);
+
+        // Проверяем лоты с высокой активностью
+        const activityStats = await pool.query(`
+            SELECT 
+                al.id,
+                al.auction_number,
+                al.lot_number,
+                al.winner_login,
+                al.winning_bid,
+                al.starting_bid,
+                COUNT(lb.id) as total_bids,
+                COUNT(DISTINCT lb.bidder_login) as unique_bidders,
+                ROUND(al.winning_bid / NULLIF(al.starting_bid, 0), 2) as price_multiplier
+            FROM auction_lots al
+            LEFT JOIN lot_bids lb ON al.id = lb.lot_id
+            WHERE al.winning_bid IS NOT NULL
+              AND al.starting_bid IS NOT NULL
+              AND al.winning_bid > 0
+              AND al.starting_bid > 0
+            GROUP BY al.id, al.auction_number, al.lot_number, al.winner_login, 
+                     al.winning_bid, al.starting_bid
+            HAVING COUNT(lb.id) >= 10
+            ORDER BY total_bids DESC
+            LIMIT 10
+        `);
+
+        res.json({
+            success: true,
+            debug: {
+                basic_stats: basicStats.rows[0],
+                autobid_stats: autobidStats.rows[0],
+                high_activity_lots: activityStats.rows
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Ошибка диагностики ловушек автобида:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Ошибка диагностики',
+            details: error.message 
+        });
+    }
+});
+
 // Страница аналитики
 app.get('/analytics', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'analytics.html'));
