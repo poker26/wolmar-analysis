@@ -176,15 +176,17 @@ app.get('/api/analytics/autobid-traps', async (req, res) => {
                     COUNT(DISTINCT lb.bidder_login) as unique_bidders,
                     COUNT(CASE WHEN lb.is_auto_bid = true THEN 1 END) as autobid_count,
                     COUNT(CASE WHEN lb.is_auto_bid = false THEN 1 END) as manual_bid_count,
-                    ROUND(al.winning_bid / NULLIF(al.starting_bid, 0), 2) as price_multiplier
+                    MIN(lb.bid_amount) as min_bid,
+                    ROUND(al.winning_bid / NULLIF(MIN(lb.bid_amount), 0), 2) as price_multiplier
                 FROM auction_lots al
                 LEFT JOIN lot_bids lb ON al.id = lb.lot_id
                 WHERE al.winning_bid IS NOT NULL
-                  AND al.starting_bid IS NOT NULL
                   AND al.winning_bid > 0
-                  AND al.starting_bid > 0
+                  AND lb.bid_amount IS NOT NULL
+                  AND lb.bid_amount > 0
                 GROUP BY al.id, al.auction_number, al.lot_number, al.winner_login, 
                          al.winning_bid, al.starting_bid, al.category
+                HAVING COUNT(lb.id) > 0
             ),
             winner_autobid_check AS (
                 SELECT 
@@ -220,7 +222,7 @@ app.get('/api/analytics/autobid-traps', async (req, res) => {
                 lot_number,
                 winner_login,
                 winning_bid,
-                starting_bid,
+                min_bid,
                 price_multiplier,
                 total_bids,
                 unique_bidders,
